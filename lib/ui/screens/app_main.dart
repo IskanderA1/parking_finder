@@ -5,6 +5,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:parking_finder/model/lat_lon.dart';
 import 'package:parking_finder/ui/components/bottom_sheet_shape.dart';
 import 'package:parking_finder/service/location.dart';
+import 'package:parking_finder/ui/sidebar/sidebar.dart';
 import 'location_view.dart';
 
 
@@ -51,18 +52,16 @@ class _AppScreenState extends State<AppScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          Expanded(
-            flex: 12,
-            child: GoogleMap(
+      body: Stack(
+        children: <Widget>[
+         GoogleMap(
               mapType: MapType.hybrid,
               initialCameraPosition: _kCameraPosition,
               onMapCreated: (GoogleMapController controller) {
                 _controller.complete(controller);
               },
             ),
-          ),
+          SideBar(searchByMyPos: searchByMyPos,searchByAddress: searchByAddress,),
         ],
       ),
       floatingActionButton: FloatingActionButton(
@@ -86,6 +85,21 @@ class _AppScreenState extends State<AppScreen> {
     ));
   }
 
+  Future<void> searchByMyPos()async{
+    Location location = Location();
+    await location.getCurrentLocation();
+    setState(() {
+      latLon = LatLon(lat: location.latitude, lon: location.longitude);
+    });
+    await searchPlace();
+  }
+
+  Future<void> searchByAddress()async{
+    await Navigator.push(context, MaterialPageRoute(builder: (context){
+      return SearchLocationView(updateLocation: updateLatLon,);
+    }));
+    await searchPlace();
+  }
   void _openSignOutDrawer() {
     showModalBottomSheet(
         shape: BottomSheetShape(),
@@ -128,7 +142,7 @@ class _AppScreenState extends State<AppScreen> {
                           });
                           await searchPlace();
                         },
-                        color: Color(0xFF23eacb),
+                        color: Colors.white,
                         child: Text(
                           "Рядом",
                           style: TextStyle(

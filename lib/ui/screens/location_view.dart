@@ -24,7 +24,7 @@ class SearchLocationView extends StatefulWidget {
 
 class _SearchLocationViewState extends State<SearchLocationView> {
   TextEditingController _searchController = new TextEditingController();
-//  Timer _throttle;
+
   var uuid = new Uuid();
 
   String _sessionToken;
@@ -78,11 +78,7 @@ class _SearchLocationViewState extends State<SearchLocationView> {
 
     for (var i=0; i < predictions.length; i++) {
       String name = predictions[i]['value'];
-      //String placeId = predictions[i]['place_id'];
-
-      // TODO figure out the budget
-      double averageBudget = 200.0;
-      _displayResults.add(Place(name, averageBudget));
+      _displayResults.add(Place(name));
     }
 
     if (this.mounted) {

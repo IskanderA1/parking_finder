@@ -32,12 +32,10 @@ dependencies:
   geolocator: ^6.0.0
   http: ^0.12.2
   flutter_spinkit: ^4.1.2
-  geocoder: ^0.2.1
-  flutter_google_places: ^0.2.6
-  google_maps_webservice: ^0.0.18
   uuid: 2.2.2
   auto_size_text: ^2.1.0
-  dio: ^3.0.10
+  rxdart: ^0.24.1
+
 
 dev_dependencies:
   flutter_test:
