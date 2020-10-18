@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:parking_finder/model/lat_lon.dart';
+import 'package:parking_finder/model/parking.dart';
+import 'package:parking_finder/service/networking.dart';
 import 'package:parking_finder/ui/components/bottom_sheet_shape.dart';
 import 'package:parking_finder/service/location.dart';
 import 'package:parking_finder/ui/sidebar/sidebar.dart';
@@ -18,6 +21,12 @@ class AppScreen extends StatefulWidget {
 
 
 class _AppScreenState extends State<AppScreen> {
+  Map<String,String> jsonMap;
+  List<ParkingPlace> listParkingPlace = List<ParkingPlace>();
+
+  final Map<String, Marker> _markers = {};
+
+
   Completer<GoogleMapController> _controller = Completer();
   LatLon latLon;
 
@@ -27,22 +36,20 @@ class _AppScreenState extends State<AppScreen> {
     zoom: 12,
   );
 
-  void updateUI(dynamic locationData){
-    setState(() {
-      if(locationData==null){
-        latLon = LatLon(lat: 55.787519, lon: 49.123687);
-        return;
-      }
-      latLon =locationData;
-    });
-  }
 
-  void updateLatLon(LatLon locationData){
+
+  void updateLatLon (LatLon locationData)async{
     setState(() {
       if(locationData== null){
         return;
       }
       latLon =locationData;
+      jsonMap = {'lon': '${latLon.lon}', 'lat': '${latLon.lat}'};
+    });
+    NetworkHelper networkHelper = NetworkHelper(url: "http://catgif-env.eba-f7hmgqks.us-east-2.elasticbeanstalk.com/api/v1.0/coords");
+    List<ParkingPlace> transit= await networkHelper.loadCoord(jsonMap);
+    setState(() {
+      listParkingPlace = transit;
     });
   }
   @override
@@ -55,11 +62,12 @@ class _AppScreenState extends State<AppScreen> {
       body: Stack(
         children: <Widget>[
          GoogleMap(
-              mapType: MapType.hybrid,
-              initialCameraPosition: _kCameraPosition,
-              onMapCreated: (GoogleMapController controller) {
-                _controller.complete(controller);
-              },
+           mapType: MapType.hybrid,
+           initialCameraPosition: _kCameraPosition,
+           onMapCreated: (GoogleMapController controller) {
+             _controller.complete(controller);
+           },
+           markers: _markers.values.toSet(),
             ),
           SideBar(searchByMyPos: searchByMyPos,searchByAddress: searchByAddress,),
         ],
@@ -85,13 +93,40 @@ class _AppScreenState extends State<AppScreen> {
     ));
   }
 
+  Future<void> _onMapCreated() async {
+    setState(() {
+      _markers.clear();
+      for (ParkingPlace parkingPlaceItem in listParkingPlace) {
+        final marker = Marker(
+          onTap:(){
+            _openSignOutDrawer();
+          },
+          markerId: MarkerId(parkingPlaceItem.id.toString()),
+          position: LatLng(parkingPlaceItem.lat, parkingPlaceItem.lon),
+          infoWindow: InfoWindow(
+            title: "Парковка",
+
+          ),
+        );
+        _markers[parkingPlaceItem.id.toString()] = marker;
+      }
+    });
+  }
+
   Future<void> searchByMyPos()async{
     Location location = Location();
     await location.getCurrentLocation();
+    NetworkHelper networkHelper = NetworkHelper(url: "http://catgif-env.eba-f7hmgqks.us-east-2.elasticbeanstalk.com/api/v1.0/coords");
     setState(() {
       latLon = LatLon(lat: location.latitude, lon: location.longitude);
+      jsonMap = {'lon': '${location.longitude}', 'lat': '${location.latitude}'};
+    });
+    List<ParkingPlace> transit= await networkHelper.loadCoord(jsonMap);
+    setState(() {
+      listParkingPlace = transit;
     });
     await searchPlace();
+    await _onMapCreated();
   }
 
   Future<void> searchByAddress()async{
@@ -99,6 +134,7 @@ class _AppScreenState extends State<AppScreen> {
       return SearchLocationView(updateLocation: updateLatLon,);
     }));
     await searchPlace();
+    await _onMapCreated();
   }
   void _openSignOutDrawer() {
     showModalBottomSheet(
@@ -108,24 +144,18 @@ class _AppScreenState extends State<AppScreen> {
         builder: (context) {
           return Container(
             padding: const EdgeInsets.only(
-              top: 24,
+              top: 16,
               bottom: 16,
-              left: 48,
-              right: 48,
+              left: 24,
+              right: 24,
             ),
-            height: 180,
+            height: 300,
             child: Column(
-              mainAxisSize: MainAxisSize.max,
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: <Widget>[
-                Text(
-                  "Где хотите искать свободные места?",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
+                Container(
+                  height: 200,
+                  child: Image.network("https://megapolisonline.ru/content/uploads/2019/05/1-74.jpg"),
                 ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -134,17 +164,11 @@ class _AppScreenState extends State<AppScreen> {
                     Expanded(
                       child: MaterialButton(
                         onPressed: () async {
-                          Navigator.pop(context);
-                          Location location = Location();
-                          await location.getCurrentLocation();
-                          setState(() {
-                            latLon = LatLon(lat: location.latitude, lon: location.longitude);
-                          });
-                          await searchPlace();
+
                         },
                         color: Colors.white,
                         child: Text(
-                          "Рядом",
+                          "Занять",
                           style: TextStyle(
                             color: Color(0xFF29304a),
                             fontSize: 16,
@@ -154,23 +178,39 @@ class _AppScreenState extends State<AppScreen> {
                       ),
                     ),
                     SizedBox(
-                      width: 20,
+                      width: 10,
                     ),
                     Expanded(
                       child: OutlineButton(
-                        onPressed: () async{
-                          Navigator.pop(context);
-                          await Navigator.push(context, MaterialPageRoute(builder: (context){
-                            return SearchLocationView(updateLocation: updateLatLon,);
-                          }));
-                          await searchPlace();
+                        onPressed: () {
                         },
                         borderSide: BorderSide(
                           color: Color(0xFF23eacb),
                         ),
                         color: Theme.of(context).primaryColor,
                         child: Text(
-                          "По адресу",
+                          "Занято",
+                          style: TextStyle(
+                            color: Theme.of(context).scaffoldBackgroundColor,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 10,
+                    ),
+                    Expanded(
+                      child: OutlineButton(
+                        onPressed: () {
+                        },
+                        borderSide: BorderSide(
+                          color: Color(0xFF23eacb),
+                        ),
+                        color: Theme.of(context).primaryColor,
+                        child: Text(
+                          "Ошибка",
                           style: TextStyle(
                             color: Theme.of(context).scaffoldBackgroundColor,
                             fontSize: 16,

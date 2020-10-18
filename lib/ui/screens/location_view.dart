@@ -186,7 +186,7 @@ class _SearchLocationViewState extends State<SearchLocationView> {
                 setState(() {
                   _sessionToken = null;
                 });
-                widget.updateLocation(LatLon(lat: double.parse(responseBody[0]['geo_lat']), lon: double.parse(responseBody[0]['geo_lon'])));
+                await widget.updateLocation(LatLon(lat: double.parse(responseBody[0]['geo_lat']), lon: double.parse(responseBody[0]['geo_lon'])));
                 Navigator.pop(context);
               },
             ),

@@ -1,12 +1,10 @@
+import 'package:flutter/cupertino.dart';
 import 'package:parking_finder/service/location.dart';
 
-class ParkingModel{
-  Future<dynamic> getLocationWeather() async {
-    Location location = new Location();
-    await location.getCurrentLocation();
-
-    //NetworkHelper networkHelper = NetworkHelper('?lat=${location.latitude}&lon=${location.longitude}');
-    //var parkingData = await networkHelper.getData();
-    return null;
-  }
+class ParkingPlace{
+  ParkingPlace({@required this.id,@required this.lat, @required this.lon, this.baseImage});
+  int id;
+  double lat;
+  double lon;
+  String baseImage;
 }

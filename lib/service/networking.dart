@@ -1,53 +1,83 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
+import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart';
+import 'package:parking_finder/model/parking.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:typed_data';
 
 class NetworkHelper{
 
-  final kBackendAppURL = "Asd";
-  final kContentType = "application/json";
-  final kAuthorization = "Token a76e35d839b20faf08921dd7a0f3d4796ac3ce33";
 
-  NetworkHelper(this.url);
+  final contentType = "application/json";
+
+
+  NetworkHelper({@required this.url,this.tokenAuth});
   final String url;
+  final tokenAuth;
 
-  Future getData() async{
-    Response response = await get(url);
-
+  Future<bool> authorization() async{
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String token = prefs.getString('token');
+    Response response = await get(url,headers: {
+      'Content-type': contentType,
+      'x-access-token value': token
+    });
     if(response.statusCode == 200){
-      var decodeData = jsonDecode(response.body);
-      return decodeData;
-    }else{
-      print(response.statusCode);
-    }
-  }
-  Future<bool> authorization(String token) async{
-    Response response = await post(url);
-    if(response.statusCode == 200){
-      var decodeData = jsonDecode(response.body);
+      print("status = ${response.statusCode}");
       return true;
     }else{
-      print(response.statusCode);
+      print("status = ${response.statusCode}");
       return false;
     }
   }
 
- /* Future apiRequest(String url, List<String> jsonMap) async {
+  Future logining(String username,String password) async {
     Client client = Client();
-    Response response = await client.post(
-        kBackendAppURL,
-        body: jsonEncode(jsonMap),
-        headers: {
-          'Content-type': kContentType,
-          'Authorization': kAuthorization,
-          'X-Secret': kXSecret
-        });
+
+    String basicAuth =
+        'Basic ' + base64Encode(utf8.encode('$username:$password'));
+    print(basicAuth);
+
+    Response response = await client.get(url,
+        headers: <String, String>{'authorization': basicAuth});
+    print(response.statusCode);
+    print(response.body);
     if(response.statusCode == 200){
       var decodeData = jsonDecode(response.body);
+      //TODO раскомитеть преференс
+      //SharedPreferences prefs = await SharedPreferences.getInstance();
+      //prefs.setString('token', decodeData['token']);
       return decodeData;
     }else{
       print(response.statusCode);
     }
     client.close();
-  }*/
+  }
+
+  Future<List<ParkingPlace>> loadCoord(Map<String, String> jsonMap) async{
+    Client client = Client();
+    List<ParkingPlace> listParkingPlace = List<ParkingPlace>();
+    Response response = await client.post(
+        url,
+        body: json.encode(jsonMap),
+        headers: {'Content-type': contentType}
+    );
+    print(response.statusCode);
+    print(response.body);
+    if(response.statusCode == 200){
+      var decodeData = jsonDecode(response.body);
+
+      print("decodeData = " + decodeData['lat']);
+      var rng = new Random();
+      listParkingPlace.add(ParkingPlace(id: rng.nextInt(100),lat:double.parse( decodeData['lat']),lon: double.parse(decodeData['lon']), baseImage: decodeData['ImageBytes']));
+      return listParkingPlace;
+    }else{
+      print("jsonMap = " + jsonMap['lon']);
+      print("false  =  ${response.statusCode}");
+    }
+    client.close();
+  }
 
 }
